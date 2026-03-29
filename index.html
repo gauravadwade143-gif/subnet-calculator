@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subnet Pro | Network Visualizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --host: #ff4d6d;
+            --glass: rgba(15, 23, 42, 0.8);
+        }
+
+        /* Networking Background */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .calculator-card {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2.5rem;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 700px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        .input-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            color: var(--primary);
+            font-family: 'Fira Code', monospace;
+            font-size: 1.1rem;
+            outline: none;
+            transition: 0.3s;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            color: #0f172a;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        /* Result Sections */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+            display: none;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
+        .stat-val { display: block; margin-top: 5px; font-weight: 600; color: var(--primary); }
+
+        .binary-map {
+            margin-top: 25px;
+            background: #000;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            display: none;
+            border: 1px solid #1e293b;
+            line-height: 1.6;
+        }
+
+        .net-bit { color: var(--primary); text-shadow: 0 0 5px var(--primary); }
+        .host-bit { color: var(--host); }
+    </style>
+</head>
+<body>
+
+<div id="particles-js"></div>
+
+<div class="calculator-card">
+    <h1>Subnet Pro</h1>
+    <p style="color: #64748b; margin-top: -5px; margin-bottom: 25px;">Advanced Network Segmentation Tool</p>
+
+    <div class="input-box">
+        <input type="text" id="ipInput" placeholder="192.168.1.1/24" autocomplete="off">
+    </div>
+    
+    <button onclick="calculate()">Analyze Network</button>
+
+    <div id="resGrid" class="results-grid">
+        <div class="stat-card"><span class="stat-label">Network Class</span><span class="stat-val" id="resClass">-</span></div>
+        <div class="stat-card"><span class="stat-label">Usable Hosts</span><span class="stat-val" id="resHosts">-</span></div>
+        <div class="stat-card"><span class="stat-label">Network ID</span><span class="stat-val" id="resNet">-</span></div>
+        <div class="stat-card"><span class="stat-label">Subnet Mask</span><span class="stat-val" id="resMask">-</span></div>
+    </div>
+
+    <div id="binMap" class="binary-map">
+        <div class="stat-label" style="margin-bottom: 10px;">Binary Breakdown</div>
+        <div>Mask: <span id="binMask"></span></div>
+        <div>Net:  <span id="binNet"></span></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+<script>
+    // Initialize Background
+    particlesJS("particles-js", {
+        "particles": {
+            "number": { "value": 80 },
+            "color": { "value": "#4facfe" },
+            "shape": { "type": "circle" },
+            "opacity": { "value": 0.5 },
+            "size": { "value": 3 },
+            "line_linked": { "enable": true, "distance": 150, "color": "#4facfe", "opacity": 0.4, "width": 1 },
+            "move": { "enable": true, "speed": 2 }
+        }
+    });
+
+    async function calculate() {
+        const ip = document.getElementById('ipInput').value;
+        const response = await fetch('/calculate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ ip: ip })
+        });
+        const r = await response.json();
+        
+        if(r.success) {
+            document.getElementById('resGrid').style.display = 'grid';
+            document.getElementById('binMap').style.display = 'block';
+
+            document.getElementById('resClass').innerText = r.data.ip_class;
+            document.getElementById('resHosts').innerText = (r.data.total_hosts - 2).toLocaleString();
+            document.getElementById('resNet').innerText = r.data.network;
+            document.getElementById('resMask').innerText = r.data.mask;
+
+            const formatBits = (binStr) => {
+                let colored = "";
+                let bitCount = 0;
+                for (let char of binStr) {
+                    if (char === '.') colored += char;
+                    else {
+                        bitCount++;
+                        let cls = (bitCount <= r.data.cidr) ? 'net-bit' : 'host-bit';
+                        colored += `<span class="${cls}">${char}</span>`;
+                    }
+                }
+                return colored;
+            };
+
+            document.getElementById('binMask').innerHTML = formatBits(r.data.bin_mask);
+            document.getElementById('binNet').innerHTML = formatBits(r.data.bin_net);
+            
+        } else {
+            alert("Invalid Input! Use CIDR format like 192.168.1.0/24");
+        }
+    }
+</script>
+
+</body>
+</html>
